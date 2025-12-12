@@ -7,33 +7,43 @@
 
 import SwiftUI
 
+import SwiftUI
+import FirebaseAuth
+
 struct ProjectsListView: View {
 
-   // @State private var projects: [Project] = []
     @EnvironmentObject var projectService: ProjectService
     @EnvironmentObject var auth: AuthService
+
     @State private var showingNewProjectSheet = false
     @State private var newProjectName = ""
-    
+
     var body: some View {
-        VStack {
-            HStack {
-                Text("Your Projects")
+        VStack(spacing: 0) {
+
+            // MARK: Header
+            VStack(alignment: .leading, spacing: 6) {
+                Text(greetingText)
                     .font(.largeTitle)
                     .bold()
-                Spacer()
 
-                Button("Sign Out") {
-                    try? auth.signOut()
-                }
+                Text("Your panel schedule projects")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
 
+            // MARK: Project List
             List {
                 ForEach(projectService.projects) { project in
-                    NavigationLink(destination: ProjectDetailView(projectId: project.id)) {
-                        Text(project.name)
+                    NavigationLink(
+                        destination: ProjectDetailViewV2(projectId: project.id)
+                    ) {
+                        ProjectCard(project: project)
                     }
+                    .listRowInsets(EdgeInsets())
+                    .padding(.vertical, 6)
                 }
                 .onDelete { indexSet in
                     for index in indexSet {
@@ -42,19 +52,30 @@ struct ProjectsListView: View {
                     }
                 }
             }
+            .listStyle(.plain)
 
-            Button(action: {
-                showingNewProjectSheet = true
-            }) {
-                Text("New Project")
-                    .font(.headline)
-                    .padding()
+            // MARK: Footer Actions
+            VStack(spacing: 12) {
+                Button {
+                    showingNewProjectSheet = true
+                } label: {
+                    Label("New Project", systemImage: "plus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Sign Out") {
+                    try? auth.signOut()
+                }
+                .font(.footnote)
+                .foregroundColor(.secondary)
             }
-            .buttonStyle(.borderedProminent)
             .padding()
         }
         .onAppear {
-            projectService.loadProjects()   // <-- CORRECT LOCATION
+            projectService.loadProjects()
         }
         .sheet(isPresented: $showingNewProjectSheet) {
             NewProjectSheet(
@@ -68,8 +89,48 @@ struct ProjectsListView: View {
         }
     }
 
+    // MARK: Greeting
+    private var greetingText: String {
+        if let name = auth.user?.displayName, !name.isEmpty {
+            return "Welcome back, \(name)"
+        }
+        if let email = auth.user?.email {
+            return "Welcome back"
+        }
+        return "Your Projects"
+    }
     private func createNewProject() {
         projectService.createProject(name: "Untitled Project")
         projectService.loadProjects()
+    }
+}
+
+   
+
+
+
+struct ProjectCard: View {
+    let project: Project
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(project.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                Text("\(project.pdfFiles.count) Panel Schedule Drawings uploaded")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(14)
     }
 }

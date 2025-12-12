@@ -1,10 +1,3 @@
-//
-//  LoginView.swift
-//  AIPanelSchedules
-//
-//  Created by Kenneth Riendeau on 12/7/25.
-//
-
 import SwiftUI
 import GoogleSignInSwift
 import AuthenticationServices
@@ -14,41 +7,90 @@ struct LoginView: View {
 
     @EnvironmentObject var auth: AuthService
     @State private var appleRequest: ASAuthorizationAppleIDRequest?
-    
+
     var body: some View {
-        VStack(spacing: 20) {
-
-            Text("AIPanelSchedules")
-                .font(.largeTitle)
-                .bold()
-                .padding(.bottom, 40)
-
-            // Google Button
-            GoogleSignInButton {
-                signInWithGoogle()
-            }
-            .frame(width: 250, height: 50)
-
-            // Apple Button
-            SignInWithAppleButton(.signIn, onRequest: { request in
-                self.appleRequest = auth.startSignInWithAppleFlow()
-                if let appleRequest = self.appleRequest {
-                    request.requestedScopes = appleRequest.requestedScopes
-                    request.nonce = appleRequest.nonce
-                }
-            }, onCompletion: { result in
-                Task {
-                    try? await auth.handleAppleCompletion(result)
-                }
-            })
-            .signInWithAppleButtonStyle(.black)
-            .frame(width: 250, height: 50)
-
+        ZStack {
+            backgroundBolt
+            centeredContent
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
         .padding()
     }
 
-    // Helper for Google Sign In
+    // MARK: - Background Anchor
+
+    private var backgroundBolt: some View {
+        Image(systemName: "bolt.fill")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 280)
+            .foregroundColor(Color.primary.opacity(0.06))
+            .rotationEffect(.degrees(-12))
+            .accessibilityHidden(true)
+    }
+
+    // MARK: - Centered Content
+
+    private var centeredContent: some View {
+        VStack(spacing: 18) {
+
+            Text("AIPanelSchedules")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            (
+                Text("Built for electricians. ")
+                    .foregroundColor(.secondary)
+                +
+                Text("Powered by AI.")
+                    .foregroundColor(.blue)
+                    .fontWeight(.semibold)
+            )
+            .font(.subheadline)
+
+            Text("Scan panel schedules and instantly generate structured Excel files.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            Spacer().frame(height: 24)
+
+            GoogleSignInButton {
+                signInWithGoogle()
+            }
+            .frame(width: 260, height: 50)
+
+            SignInWithAppleButton(
+                .signIn,
+                onRequest: { request in
+                    self.appleRequest = auth.startSignInWithAppleFlow()
+                    if let appleRequest = self.appleRequest {
+                        request.requestedScopes = appleRequest.requestedScopes
+                        request.nonce = appleRequest.nonce
+                    }
+                },
+                onCompletion: { result in
+                    Task {
+                        try? await auth.handleAppleCompletion(result)
+                    }
+                }
+            )
+            .signInWithAppleButtonStyle(.black)
+            .frame(width: 260, height: 50)
+
+            Spacer().frame(height: 28)
+
+            Text("Sign in to access your projects across devices.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: 420)
+    }
+
+    // MARK: - Google Sign In Helper
+
     private func signInWithGoogle() {
         guard let rootVC = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
