@@ -11,7 +11,9 @@ import FirebaseFirestore
 struct PDFFileCard: View {
     @State private var isGeneratingExcel = false
     @EnvironmentObject var projectService: ProjectService
-
+//For backend changes
+    @State private var scanJobListener: ListenerRegistration?
+    @State private var scanJobId: String?
     // 1. INPUT FIX: Accept the ID instead of the entire project object
     let pdfUrl: URL
     let projectId: String // <--- NEW STABLE INPUT
@@ -84,7 +86,9 @@ struct PDFFileCard: View {
     }
     
     private var hasBeenScanned: Bool {
-        return panels.contains(where: { $0.sourcePDFID == pdfUrl.lastPathComponent })
+        return panels.contains(where: {
+            $0.sourcePDFID == pdfId
+        })
     }
     
     // MARK: - Final Excel Persistence Logic (Uses the stable projectId)
@@ -173,55 +177,56 @@ struct PDFFileCard: View {
     }
     
     // MARK: - Logic (startGeminiScan is largely unchanged)
-    func startGeminiScan() {
+        func startGeminiScan() {
+        createScanJob()
+
         isThisCardScanning = true
         currentScanningID = cardID
-        
-        print("✨ Starting AI Scan for: \(pdfUrl.lastPathComponent)")
-        
+        listenForScanCompletion()   // 👈 ADD THIS
+
+        print("🧾 Scan job created. Backend will handle Gemini + Excel.")
+
+        // Optional: lightweight UI progress animation
         let _ = Task { await runProgressAnimation() }
+    }
+    private func createScanJob() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
 
-        Task {
-            do {
-                // ... (unchanged download logic) ...
-                var request = URLRequest(url: pdfUrl)
-                request.cachePolicy = .reloadIgnoringLocalCacheData
-                request.timeoutInterval = 600
-                
-                let (data, _) = try await URLSession.shared.data(for: request)
-                
-                print("✅ Download complete (Size: \(data.count) bytes). Sending to Gemini...")
+        let jobId = UUID().uuidString
+        let db = Firestore.firestore()
+        self.scanJobId = jobId   // 👈 ADD THIS
 
-                let response = try await GeminiService.shared.extractPanels(from: data)
-                
-                var stampedPanels = response.panels
-                for i in 0..<stampedPanels.count {
-                    stampedPanels[i].sourcePDFID = pdfUrl.lastPathComponent
-                }
-                
-                await MainActor.run {
-                    print("🎉 Scan Success. Panels found: \(stampedPanels.count)")
-                    self.onScanCompleted(stampedPanels)
-                    self.resetScanState()
-                }
-                
-            } catch {
-                print("❌ Scan Error: \(error.localizedDescription)")
-                await MainActor.run {
-                    self.scanErrorMessage = "The scan failed. Please check your connection.\n\nDetails: \(error.localizedDescription)"
-                    self.activeAlert = .scanError
-                    self.resetScanState()
-                }
+        let jobRef = db
+            .collection("users")
+            .document(uid)
+            .collection("scanJobs")
+            .document(jobId)
+
+        let data: [String: Any] = [
+            "id": jobId,
+            "projectId": projectId,
+            "pdfId": pdfId,
+            "fileName": fileName,
+            "urlString": pdfUrl.absoluteString,   // 🔑 ADD THIS
+            "status": "queued",
+            "createdAt": Timestamp(),
+            "updatedAt": Timestamp()
+        ]
+
+        jobRef.setData(data) { error in
+            if let error = error {
+                print("❌ Failed to create ScanJob:", error.localizedDescription)
+            } else {
+                print("🧾 ScanJob created:", jobId)
             }
         }
     }
-
     // MARK: - Excel Generation (Corrected to use projectId)
     func generateExcel() {
         isGeneratingExcel = true
         // 1. Filter using the FILENAME
-        let myPanels = panels.filter { $0.sourcePDFID == pdfUrl.lastPathComponent }
-        
+     //   let myPanels = panels.filter { $0.sourcePDFID == pdfUrl.lastPathComponent }
+        let myPanels = panels.filter { $0.sourcePDFID == pdfId }
         print("📊 Generating Excel for \(fileName). Found \(myPanels.count) panels.")
 
         // 2. Send only these panels, using the stable projectId
@@ -325,5 +330,59 @@ struct PDFFileCard: View {
         try? await Task.sleep(nanoseconds: 20 * 1_000_000_000)
         if !isThisCardScanning { return }
         await updateStatus("Finalizing Data...")
+    }
+    private func listenForScanCompletion() {
+        guard
+            let uid = Auth.auth().currentUser?.uid,
+            let jobId = scanJobId
+        else { return }
+
+        let jobRef = Firestore.firestore()
+            .collection("users")
+            .document(uid)
+            .collection("scanJobs")
+            .document(jobId)
+
+        scanJobListener = jobRef.addSnapshotListener { snapshot, _ in
+            guard let data = snapshot?.data(),
+                  let status = data["status"] as? String else { return }
+
+            switch status {
+
+            case "finished":
+                print("✅ Scan finished — loading panels")
+
+                self.resetScanState()
+                self.scanJobListener?.remove()
+                self.scanJobListener = nil
+
+                // 🔑 THIS replaces old Gemini callback
+                self.projectService.fetchProject(id: projectId) { project in
+                    guard let project else { return }
+
+                    self.projectService.fetchPanels(for: project) { panels in
+                        DispatchQueue.main.async {
+                            self.onScanCompleted(panels)   // ✅ THIS is the key
+                            self.projectService.loadProjects() // refresh PDFs + Excel later
+                        }
+                    }
+                }
+
+            case "failed":
+                print("❌ Scan failed")
+
+                self.scanErrorMessage =
+                    (data["errorMessage"] as? String)
+                    ?? "Scan failed. Please try again."
+
+                self.activeAlert = .scanError
+                self.resetScanState()
+                self.scanJobListener?.remove()
+                self.scanJobListener = nil
+
+            default:
+                break
+            }
+        }
     }
 }
