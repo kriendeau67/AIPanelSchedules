@@ -39,6 +39,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         Messaging.messaging().delegate = self
 
+        // 🔥 CLEAR BADGE ON APP LAUNCH
+            application.applicationIconBadgeNumber = 0
+
         return true
     }
     func application(
@@ -48,6 +51,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             Messaging.messaging().apnsToken = deviceToken
         }
 
+
     // ✅ MUST be here (class-level)
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -55,6 +59,23 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     ) async -> UNNotificationPresentationOptions {
         return [.banner, .sound]
     }
+=======
+    // 🔔 Foreground presentation
+        func userNotificationCenter(
+            _ center: UNUserNotificationCenter,
+            willPresent notification: UNNotification
+        ) async -> UNNotificationPresentationOptions {
+            return [.banner, .sound]
+        }
+
+        // 🔕 User tapped notification → clear badge
+        func userNotificationCenter(
+            _ center: UNUserNotificationCenter,
+            didReceive response: UNNotificationResponse
+        ) async {
+            UIApplication.shared.applicationIconBadgeNumber = 0
+        }
+>>>>>>> 62dbcc0 (APn working!)
 }
 
 
