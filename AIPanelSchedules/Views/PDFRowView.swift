@@ -75,7 +75,7 @@ struct PDFRowView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
 
-                    } else if hasBeenScanned && finalExcelURL == nil {
+                   /* } else if hasBeenScanned && finalExcelURL == nil {
 
                         Button(action: onGenerateExcel) {
                             if isGeneratingExcel {
@@ -94,7 +94,27 @@ struct PDFRowView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.orange)
                         .disabled(isGeneratingExcel)
+*/
+                    } else if hasBeenScanned && finalExcelURL == nil {
 
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .scaleEffect(1.1)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Preparing Excel")
+                                    .font(.headline)
+
+                                Text("This may take a moment…")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.12))
+                        .cornerRadius(8)
                     } else if let url = finalExcelURL {
 
                         Button {
@@ -108,17 +128,6 @@ struct PDFRowView: View {
                     }
                 }
             }
-
-         /*   // Optional download link
-            if let url = finalExcelURL {
-                Button {
-                    UIApplication.shared.open(url)
-                } label: {
-                    Label("Download .xlsx File", systemImage: "arrow.down.circle.fill")
-                        .font(.subheadline)
-                }
-                .buttonStyle(.plain)
-            } */
         }
         .padding(.vertical, 12)
         .padding(.horizontal)

@@ -356,18 +356,19 @@ struct PDFFileCard: View {
                 self.scanJobListener?.remove()
                 self.scanJobListener = nil
 
-                // 🔑 THIS replaces old Gemini callback
+                // 🔑 CRITICAL FIX: refresh project list FIRST
+                self.projectService.loadProjects()
+
+                // Then fetch panels for UI
                 self.projectService.fetchProject(id: projectId) { project in
                     guard let project else { return }
 
                     self.projectService.fetchPanels(for: project) { panels in
                         DispatchQueue.main.async {
-                            self.onScanCompleted(panels)   // ✅ THIS is the key
-                            self.projectService.loadProjects() // refresh PDFs + Excel later
+                            self.onScanCompleted(panels)
                         }
                     }
                 }
-
             case "failed":
                 print("❌ Scan failed")
 
