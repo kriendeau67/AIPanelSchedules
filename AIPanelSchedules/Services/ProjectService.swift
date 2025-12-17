@@ -57,15 +57,16 @@ class ProjectService: ObservableObject {
                         else { return nil }
                         
                         let urlString = dict["urlString"] as? String
-                        let excelUrl = dict["excelUrl"] as? String   // <-- DEFINE IT HERE
+                        let excelUrl = dict["excelUrl"] as? String
+                        let excelLocked = dict["excelLocked"] as? Bool   // 🔑 MISSING LINE
 
                         return PDFFile(
                             id: id,
                             fileName: fileName,
                             uploadedAt: uploadedAtTimestamp.dateValue(),
                             urlString: urlString,
-                            excelUrl: excelUrl    // <-- ADD THIS
-
+                            excelUrl: excelUrl,
+                            excelLocked: excelLocked                      // 🔑 ADD THIS
                         )
                     }
 
@@ -80,7 +81,11 @@ class ProjectService: ObservableObject {
                         excelDownloadURL: doc["excelDownloadURL"] as? String // Ensure this is read!
                     )
                 }
-                
+                for project in loadedProjects {
+                    for pdf in project.pdfFiles {
+                        print("🧪 PDF:", pdf.fileName, "excelLocked:", pdf.excelLocked as Any)
+                    }
+                }
                 // 3. Update the published variable on the main thread
                 DispatchQueue.main.async {
                     self.projects = loadedProjects
@@ -187,9 +192,17 @@ class ProjectService: ObservableObject {
                         else { return nil }
                         
                         let urlString = dict["urlString"] as? String
-                        let excelUrl = dict["excelUrl"] as? String      // ✅ NEW FIELD
+                        let excelUrl = dict["excelUrl"] as? String
+                        let excelLocked = dict["excelLocked"] as? Bool   // 🔑 ADD
 
-                        return PDFFile(id: id, fileName: fileName, uploadedAt: uploadedAt, urlString: urlString,excelUrl: excelUrl)
+                        return PDFFile(
+                            id: id,
+                            fileName: fileName,
+                            uploadedAt: uploadedAt,
+                            urlString: urlString,
+                            excelUrl: excelUrl,
+                            excelLocked: excelLocked                      // 🔑 ADD
+                        )
                     }
 
                     let updated = Project(
@@ -462,7 +475,9 @@ extension ProjectService {
                 "fileName": fileName,
                 "uploadedAt": Timestamp(date: Date()),
                 "urlString": downloadURL,
-                "excelUrl": NSNull()        // keep field consistent
+                "excelUrl": NSNull(),
+                "excelLocked": true
+                // keep field consistent
             ]
 
             // ❌ Remove duplicates based on fileName (OR better: based on URL)

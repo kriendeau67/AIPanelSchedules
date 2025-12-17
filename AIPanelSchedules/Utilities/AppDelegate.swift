@@ -59,14 +59,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     ) async -> UNNotificationPresentationOptions {
         return [.banner, .sound]
     }
-=======
+
     // 🔔 Foreground presentation
-        func userNotificationCenter(
-            _ center: UNUserNotificationCenter,
-            willPresent notification: UNNotification
-        ) async -> UNNotificationPresentationOptions {
-            return [.banner, .sound]
-        }
+        
 
         // 🔕 User tapped notification → clear badge
         func userNotificationCenter(
@@ -75,7 +70,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         ) async {
             UIApplication.shared.applicationIconBadgeNumber = 0
         }
->>>>>>> 62dbcc0 (APn working!)
 }
 
 

@@ -8,7 +8,8 @@ struct PDFRowView: View {
     let isGeneratingExcel: Bool   // 👈 RIGHT HERE
     let scanStatusText: String
     let finalExcelURL: URL?
-
+    let excelLocked: Bool
+    let onExcelTap: () -> Void
     let onViewPDF: () -> Void
     let onDelete: () -> Void
     let onScan: () -> Void
@@ -75,26 +76,7 @@ struct PDFRowView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
 
-                   /* } else if hasBeenScanned && finalExcelURL == nil {
-
-                        Button(action: onGenerateExcel) {
-                            if isGeneratingExcel {
-                                HStack(spacing: 10) {
-                                    ProgressView()
-                                        .tint(.white)
-                                    Text("Creating Excel…")
-                                        .font(.headline)
-                                }
-                                .frame(maxWidth: .infinity)
-                            } else {
-                                Label("Create Excel", systemImage: "tablecells")
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
-                        .disabled(isGeneratingExcel)
-*/
+            
                     } else if hasBeenScanned && finalExcelURL == nil {
 
                         HStack(spacing: 12) {
@@ -118,13 +100,17 @@ struct PDFRowView: View {
                     } else if let url = finalExcelURL {
 
                         Button {
-                            UIApplication.shared.open(url)
+                            onExcelTap()
                         } label: {
-                            Label("Open Excel", systemImage: "tablecells")
-                                .frame(maxWidth: .infinity)
+                            Label {
+                                Text(excelLocked ? "Unlock Excel" : "Open Excel")
+                                    .frame(minWidth: 110, alignment: .leading)
+                            } icon: {
+                                Image(systemName: excelLocked ? "lock.fill" : "tablecells")
+                                    .frame(width: 20)
+                            }
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.green)
+                        .tint(excelLocked ? .red : .green)
                     }
                 }
             }

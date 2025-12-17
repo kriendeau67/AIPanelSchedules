@@ -164,6 +164,7 @@ struct ProjectDetailViewV2: View {
                 LazyVStack(spacing: 12) {
                     ForEach(activePDFs, id: \.id) { file in
                         if let pdfUrl = file.url {
+                            
                             PDFFileCard(
                                 pdfUrl: pdfUrl,
                                 projectId: projectId,
@@ -171,6 +172,7 @@ struct ProjectDetailViewV2: View {
                                 panels: panels,
                                 fileName: file.fileName,
                                 initialExcelUrlString: file.excelUrl,
+                                excelLocked: file.excelLocked ?? true,
                                 currentScanningID: $currentScanningPDFID,
                                 onViewPDF: {
                                     activePDFSheet = PDFSheetItem2(url: pdfUrl)
@@ -283,10 +285,11 @@ struct ProjectDetailViewV2: View {
                       let url = URL(string: excel) else { return nil }
 
                 return ExcelRow(
-                    id: file.id, // 🔑 STABLE ID — CRITICAL
+                    id: file.id,
                     name: file.fileName
                         .replacingOccurrences(of: ".pdf", with: ".xlsx"),
-                    url: url
+                    url: url,
+                    excelLocked: file.excelLocked ?? true   // 🔑 DEFAULT TO LOCKED
                 )
             }
 
@@ -299,13 +302,18 @@ struct ProjectDetailViewV2: View {
                 VStack(spacing: 8) {
                     ForEach(excelFiles) { file in
                         Button {
-                            UIApplication.shared.open(file.url)
+                            if file.excelLocked {
+                                let stripeURL = URL(string: "https://createcheckoutsession-q2xfx4bbaq-uc.a.run.app")!
+                                UIApplication.shared.open(stripeURL)
+                            } else {
+                                UIApplication.shared.open(file.url)
+                            }
                         } label: {
                             HStack {
-                                Image(systemName: "tablecells")
-                                    .foregroundColor(.green)
+                                Image(systemName: file.excelLocked ? "lock.fill" : "tablecells")
+                                    .foregroundColor(file.excelLocked ? .red : .green)
 
-                                Text(file.name)
+                                Text(file.excelLocked ? "Unlock Excel" : file.name)
                                     .foregroundColor(.primary)
 
                                 Spacer()
@@ -452,5 +460,7 @@ struct ExcelRow: Identifiable {
     let id: String        // MUST be stable
     let name: String
     let url: URL
+    let excelLocked: Bool
+
 }
 

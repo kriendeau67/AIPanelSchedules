@@ -21,7 +21,7 @@ struct PDFFileCard: View {
     let fileName: String
     let pdfId: String   // <-- Required to update the correct pdfFiles[] element
     let initialExcelUrlString: String?   // 👈 NEW
-
+    let excelLocked: Bool
     // Bindings for Parent Communication
     @Binding var currentScanningID: String?
     
@@ -51,13 +51,14 @@ struct PDFFileCard: View {
     @State private var scanStatusText = "Scanning with Gemini..."
     @State private var showScanError = false
     @State private var scanErrorMessage = ""
-    init(
+   init(
         pdfUrl: URL,
         projectId: String,
         pdfId: String,
         panels: [Panel],
         fileName: String,
         initialExcelUrlString: String?,
+        excelLocked: Bool,
         currentScanningID: Binding<String?>,
         onViewPDF: @escaping () -> Void,
         onDeletePDF: @escaping (String) -> Void,
@@ -70,13 +71,14 @@ struct PDFFileCard: View {
         self.panels = panels
         self.fileName = fileName
         self.initialExcelUrlString = initialExcelUrlString
-
+        self.excelLocked = excelLocked
         self._currentScanningID = currentScanningID
 
         self.onViewPDF = onViewPDF
         self.onDeletePDF = onDeletePDF   // now it receives the pdfId
         self.onScanCompleted = onScanCompleted
         self.onExcelGenerated = onExcelGenerated
+        print("📦 PDFFileCard init:", fileName, "excelLocked:", excelLocked)
     }
     // Computed Properties
     private var cardID: String { pdfUrl.absoluteString }
@@ -106,39 +108,43 @@ struct PDFFileCard: View {
                
 
     var body: some View    {
-        PDFRowView(
-            fileName: fileName,
-            hasBeenScanned: hasBeenScanned,
-            isScanning: isThisCardScanning,
-            isScanPending: isScanPending,
-            isGeneratingExcel: isGeneratingExcel,
-            scanStatusText: scanStatusText,
-            finalExcelURL: finalExcelURL,
-            onViewPDF: onViewPDF,
-            onDelete: { activeAlert = .delete },
-            onScan: startGeminiScan,
-            onGenerateExcel: generateExcel
-        )
-        .alert(item: $activeAlert) { type in
-            switch type {
-            case .delete:
-                return Alert(
-                    title: Text("Delete PDF?"),
-                    message: Text("This will permanently remove this file and its data."),
-                    primaryButton: .destructive(Text("Delete")) {
-                        onDeletePDF(pdfId)
-                    },
-                    secondaryButton: .cancel()
-                )
-            case .scanError:
-                return Alert(
-                    title: Text("Scan Failed"),
-                    message: Text(scanErrorMessage),
-                    dismissButton: .default(Text("OK"))
-                )
+       
+            PDFRowView(
+                fileName: fileName,
+                hasBeenScanned: hasBeenScanned,
+                isScanning: isThisCardScanning,
+                isScanPending: isScanPending,
+                isGeneratingExcel: isGeneratingExcel,
+                scanStatusText: scanStatusText,
+                finalExcelURL: finalExcelURL,
+                excelLocked: excelLocked,
+                onExcelTap: handleExcelTap,
+                onViewPDF: onViewPDF,
+                onDelete: { activeAlert = .delete },
+                onScan: startGeminiScan,
+                onGenerateExcel: generateExcel
+            )
+            .alert(item: $activeAlert) { type in
+                switch type {
+                case .delete:
+                    return Alert(
+                        title: Text("Delete PDF?"),
+                        message: Text("This will permanently remove this file and its data."),
+                        primaryButton: .destructive(Text("Delete")) {
+                            onDeletePDF(pdfId)
+                        },
+                        secondaryButton: .cancel()
+                    )
+                case .scanError:
+                    return Alert(
+                        title: Text("Scan Failed"),
+                        message: Text(scanErrorMessage),
+                        dismissButton: .default(Text("OK"))
+                    )
+                }
             }
         }
-    }
+    
     
     // MARK: - Component Views (scanButton, scanButtonBackground are unchanged)
     var scanButton: some View {
@@ -221,6 +227,15 @@ struct PDFFileCard: View {
             }
         }
     }
+    private func handleExcelTap() {
+        if excelLocked {
+            // TEMP placeholder — Stripe URL comes next
+            let stripeURL = URL(string: "https://createcheckoutsession-q2xfx4bbaq-uc.a.run.app")!
+            UIApplication.shared.open(stripeURL)
+        } else if let url = finalExcelURL {
+            UIApplication.shared.open(url)
+        }
+    }
     // MARK: - Excel Generation (Corrected to use projectId)
     func generateExcel() {
         isGeneratingExcel = true
@@ -264,7 +279,7 @@ struct PDFFileCard: View {
 
                         // 🔑 Store the Excel URL on this PDF
                         pdfFiles[index]["excelUrl"] = url.absoluteString
-
+                        pdfFiles[index]["excelLocked"] = true
                         projectRef.updateData([
                             "pdfFiles": pdfFiles
                         ]) { error in
