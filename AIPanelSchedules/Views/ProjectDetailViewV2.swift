@@ -14,7 +14,8 @@ struct PDFSheetItem2: Identifiable {
 struct ProjectDetailViewV2: View {
     
     @EnvironmentObject var projectService: ProjectService
-    
+    @EnvironmentObject var creditsService: CreditsService
+    @State private var showingBuyCreditsAlert = false
     // 1. INPUT: Accept the Project ID (Resolves the ProjectsListView compile error)
     let projectId: String
     
@@ -301,31 +302,106 @@ struct ProjectDetailViewV2: View {
             } else {
                 VStack(spacing: 8) {
                     ForEach(excelFiles) { file in
-                        Button {
+                        HStack {
+                            // Checkbox
+                            // Unlock / Status badge
                             if file.excelLocked {
-                                let stripeURL = URL(string: "https://createcheckoutsession-q2xfx4bbaq-uc.a.run.app")!
-                                UIApplication.shared.open(stripeURL)
+                                Button {
+                                    // Only unlock if the user has credits
+                                    if creditsService.credits > 0 {
+                                        print("🪙 Consuming 1 credit to unlock:", file.name)
+                                       // creditsService.consumeCredit()
+                                      //  projectService.unlockExcel(projectId: project.id, pdfId: file.id)
+                                        
+                                        projectService.unlockExcelWithCredit(
+                                            projectId: project.id,
+                                            pdfId: file.id
+                                        )
+                                        
+                                    } else {
+                                        print("🛑 No credits available — showing Buy Credits alert")
+                                        showingBuyCreditsAlert = true
+                                    }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "lock.fill")
+                                        Text("Unlock (1 Credit)")
+                                    }
+                                    .font(.caption)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(Color.red.opacity(0.12))
+                                    .foregroundColor(.red)
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+
+                    
+                                // ✅ UNLOCKED STATE (NON-INTERACTIVE)
                             } else {
-                                UIApplication.shared.open(file.url)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    
+                                    // ✅ UNLOCKED BADGE
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "checkmark.seal.fill")
+                                        Text("Unlocked")
+                                    }
+                                    .font(.caption)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(Color.green.opacity(0.15))
+                                    .foregroundColor(.green)
+                                    .cornerRadius(8)
+                                    
+                                    // 🔁 DEV ONLY — RELOCK BUTTON
+                                    #if DEBUG
+                                        Button("🔁 Relock (DEV)") {
+                                            projectService.relockExcel(
+                                                projectId: project.id,
+                                                pdfId: file.id
+                                            )
+                                        }
+                                        .font(.caption2)
+                                        .foregroundColor(.orange)
+                                    
+                                    #endif
+                                }
                             }
-                        } label: {
-                            HStack {
-                                Image(systemName: file.excelLocked ? "lock.fill" : "tablecells")
-                                    .foregroundColor(file.excelLocked ? .red : .green)
 
-                                Text(file.excelLocked ? "Unlock Excel" : file.name)
-                                    .foregroundColor(.primary)
+                            // Excel action
+                            Button {
+                                if file.excelLocked {
+                                    showingBuyCreditsAlert = true   // ✅ THIS TRIGGERS THE ALERT
+                                } else {
+                                    UIApplication.shared.open(file.url)
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: file.excelLocked ? "lock.fill" : "tablecells")
+                                        .foregroundColor(file.excelLocked ? .red : .green)
 
-                                Spacer()
+                                    Text(file.excelLocked ? "Locked Excel" : file.name)
+                                        .foregroundColor(.primary)
 
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.secondary)
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.secondary)
+                                }
                             }
-                            .padding()
-                            .background(Color(.secondarySystemBackground))
-                            .cornerRadius(8)
+                            .buttonStyle(.plain)
+                            .alert("No Credits", isPresented: $showingBuyCreditsAlert) {
+                                Button("Buy Credits") {
+                                    // future: navigate to Credits tab
+                                }
+                                Button("Cancel", role: .cancel) {}
+                            } message: {
+                                Text("You need credits to unlock this Excel file.")
+                            }
                         }
-                        .buttonStyle(.plain) // 🔑 PREVENTS MULTI-TRIGGER
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(8)
                     }
                 }
                 .padding(.horizontal)

@@ -12,6 +12,7 @@
 		6F00565C2EE5C10700827D07 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 6F00565B2EE5C10700827D07 /* FirebaseStorage */; };
 		6F0056672EE5C4D400827D07 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6F0056662EE5C4D400827D07 /* GoogleSignInSwift */; };
 		6F00566E2EE5CFE900827D07 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 6F00566D2EE5CFE900827D07 /* FirebaseFirestore */; };
+		6F20C9B62EF5DFD30071FE3C /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F20C9B52EF5DFD30071FE3C /* StoreKit.framework */; };
 		6F637A382EF06B7500F5E023 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 6F637A372EF06B7500F5E023 /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
 
@@ -36,6 +37,7 @@
 		6F00561C2EE5BB2A00827D07 /* AIPanelSchedules.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIPanelSchedules.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F0056292EE5BB2B00827D07 /* AIPanelSchedulesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPanelSchedulesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F0056332EE5BB2C00827D07 /* AIPanelSchedulesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIPanelSchedulesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F20C9B52EF5DFD30071FE3C /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -75,6 +77,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6F637A382EF06B7500F5E023 /* FirebaseMessaging in Frameworks */,
+				6F20C9B62EF5DFD30071FE3C /* StoreKit.framework in Frameworks */,
 				6F0056582EE5C0EB00827D07 /* FirebaseAuth in Frameworks */,
 				6F00565A2EE5C0F800827D07 /* FirebaseFunctions in Frameworks */,
 				6F00565C2EE5C10700827D07 /* FirebaseStorage in Frameworks */,
@@ -124,6 +127,7 @@
 		6F0056562EE5C0EB00827D07 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6F20C9B52EF5DFD30071FE3C /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

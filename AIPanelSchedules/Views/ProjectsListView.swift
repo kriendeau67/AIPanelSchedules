@@ -19,6 +19,51 @@ struct ProjectsListView: View {
     @State private var newProjectName = ""
 
     var body: some View {
+        TabView {
+
+            NavigationStack {
+                projectsContent
+            }
+            .tabItem {
+                Label("Projects", systemImage: "folder")
+            }
+
+            CreditsView()
+                .tabItem {
+                    Label("Credits", systemImage: "creditcard")
+                }
+        }
+        .onAppear {
+            projectService.loadProjects()
+        }
+        .sheet(isPresented: $showingNewProjectSheet) {
+            NewProjectSheet(
+                projectName: $newProjectName,
+                onSave: {
+                    projectService.createProject(name: newProjectName)
+                    projectService.loadProjects()
+                    newProjectName = ""
+                }
+            )
+        }
+    }
+
+    // MARK: Greeting
+    private var greetingText: String {
+        if let name = auth.user?.displayName, !name.isEmpty {
+            return "Welcome back, \(name)"
+        }
+        if let email = auth.user?.email {
+            return "Welcome back"
+        }
+        return "Your Projects"
+    }
+    private func createNewProject() {
+        projectService.createProject(name: "Untitled Project")
+        projectService.loadProjects()
+    }
+    @ViewBuilder
+    private var projectsContent: some View {
         VStack(spacing: 0) {
 
             // MARK: Header
@@ -74,34 +119,6 @@ struct ProjectsListView: View {
             }
             .padding()
         }
-        .onAppear {
-            projectService.loadProjects()
-        }
-        .sheet(isPresented: $showingNewProjectSheet) {
-            NewProjectSheet(
-                projectName: $newProjectName,
-                onSave: {
-                    projectService.createProject(name: newProjectName)
-                    projectService.loadProjects()
-                    newProjectName = ""
-                }
-            )
-        }
-    }
-
-    // MARK: Greeting
-    private var greetingText: String {
-        if let name = auth.user?.displayName, !name.isEmpty {
-            return "Welcome back, \(name)"
-        }
-        if let email = auth.user?.email {
-            return "Welcome back"
-        }
-        return "Your Projects"
-    }
-    private func createNewProject() {
-        projectService.createProject(name: "Untitled Project")
-        projectService.loadProjects()
     }
 }
 

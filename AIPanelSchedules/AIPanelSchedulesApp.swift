@@ -1,21 +1,15 @@
         import SwiftUI
         import Firebase
 
-       /* class AppDelegate: NSObject, UIApplicationDelegate {
-            func application(_ application: UIApplication,
-                             didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-                
-                FirebaseApp.configure()
-
-                return true
-            }
-        } */
+       
         @main
         struct AIPanelSchedulesApp: App {
             
             @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
             @StateObject var auth = AuthService()
             @StateObject var projectService = ProjectService()
+            @StateObject private var creditsService = CreditsService()
+            @StateObject private var storeKitService = StoreKitService()
             
             var body: some Scene {
                 WindowGroup {
@@ -29,6 +23,11 @@
                     // 👇 ENVIRONMENT OBJECTS MUST BE HERE (outside the if/else)
                     .environmentObject(auth)
                     .environmentObject(projectService)
+                    .environmentObject(creditsService)
+                    .environmentObject(storeKitService)
+                    .onAppear {
+                        creditsService.startListening()
+                    }
                 }
             }
         }

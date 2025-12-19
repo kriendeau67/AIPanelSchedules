@@ -9,7 +9,7 @@ class ProjectService: ObservableObject {
 
     @Published var projects: [Project] = []
     private var db = Firestore.firestore()
-
+    @Published var credits: Int = 0
     private var uid: String? {
         Auth.auth().currentUser?.uid
     }
@@ -91,6 +91,138 @@ class ProjectService: ObservableObject {
                     self.projects = loadedProjects
                 }
             }
+    }
+ /*   func unlockExcel(projectId: String, pdfId: String) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        let ref = Firestore.firestore()
+            .collection("users")
+            .document(uid)
+            .collection("projects")
+            .document(projectId)
+
+        ref.getDocument { snapshot, error in
+            guard
+                let data = snapshot?.data(),
+                var pdfFiles = data["pdfFiles"] as? [[String: Any]]
+            else { return }
+
+            for i in 0..<pdfFiles.count {
+                if pdfFiles[i]["id"] as? String == pdfId {
+                    pdfFiles[i]["excelLocked"] = false
+                }
+            }
+
+            ref.updateData([
+                "pdfFiles": pdfFiles
+            ])
+        }
+    } */
+    
+    func consumeCredit() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        let userRef = Firestore.firestore()
+            .collection("users")
+            .document(uid)
+
+        userRef.updateData([
+            "credits": FieldValue.increment(Int64(-1))
+        ])
+    }
+    
+    func relockExcel(projectId: String, pdfId: String) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        let ref = Firestore.firestore()
+            .collection("users")
+            .document(uid)
+            .collection("projects")
+            .document(projectId)
+
+        ref.getDocument { snapshot, _ in
+            guard
+                let data = snapshot?.data(),
+                var pdfFiles = data["pdfFiles"] as? [[String: Any]]
+            else { return }
+
+            for i in 0..<pdfFiles.count {
+                if pdfFiles[i]["id"] as? String == pdfId {
+                    pdfFiles[i]["excelLocked"] = true
+                }
+            }
+
+            ref.updateData([
+                "pdfFiles": pdfFiles
+            ])
+        }
+    }
+    func unlockExcelWithCredit(projectId: String, pdfId: String) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(uid)
+        let projectRef = userRef.collection("projects").document(projectId)
+
+        db.runTransaction { transaction, errorPointer in
+
+            // 1️⃣ Read user credits
+            let userSnap: DocumentSnapshot
+            do {
+                userSnap = try transaction.getDocument(userRef)
+            } catch {
+                errorPointer?.pointee = error as NSError
+                return nil
+            }
+
+            let credits = userSnap.data()?["credits"] as? Int ?? 0
+            if credits <= 0 {
+                errorPointer?.pointee = NSError(
+                    domain: "Credits",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "No credits available"]
+                )
+                return nil
+            }
+
+            // 2️⃣ Read project pdfFiles
+            let projectSnap: DocumentSnapshot
+            do {
+                projectSnap = try transaction.getDocument(projectRef)
+            } catch {
+                errorPointer?.pointee = error as NSError
+                return nil
+            }
+
+            guard var pdfFiles = projectSnap.data()?["pdfFiles"] as? [[String: Any]] else {
+                return nil
+            }
+
+            // 3️⃣ Unlock the matching PDF
+            for i in 0..<pdfFiles.count {
+                if pdfFiles[i]["id"] as? String == pdfId {
+                    pdfFiles[i]["excelLocked"] = false
+                }
+            }
+
+            // 4️⃣ Commit both updates
+            transaction.updateData([
+                "credits": credits - 1
+            ], forDocument: userRef)
+
+            transaction.updateData([
+                "pdfFiles": pdfFiles
+            ], forDocument: projectRef)
+
+            return nil
+
+        } completion: { _, error in
+            if let error = error {
+                print("❌ Unlock failed:", error.localizedDescription)
+            } else {
+                print("✅ Credit consumed + Excel unlocked")
+            }
+        }
     }
     // MARK: - Create a new project
     func createProject(name: String) {

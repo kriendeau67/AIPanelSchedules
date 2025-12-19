@@ -15,7 +15,8 @@ struct PDFFile: Codable, Identifiable, Hashable {
     // 🚀 NEW FIELD
     var excelUrl: String?
     var excelLocked: Bool?
-
+    var lockedAt: Date?
+    var unlockedAt: Date?
     var url: URL? {
         guard let urlString = urlString else { return nil }
         return URL(string: urlString)
@@ -32,14 +33,18 @@ struct PDFFile: Codable, Identifiable, Hashable {
         uploadedAt: Date,
         urlString: String?,
         excelUrl: String? = nil,
-        excelLocked: Bool? = nil
-
-    ) {
+        excelLocked: Bool? = nil,
+        lockedAt: Date? = nil,
+        unlockedAt: Date? = nil
+    )
+    {
         self.id = id
         self.fileName = fileName
         self.uploadedAt = uploadedAt
         self.urlString = urlString
         self.excelUrl = excelUrl
         self.excelLocked = excelLocked
+        self.lockedAt = lockedAt
+        self.unlockedAt = unlockedAt
     }
 }

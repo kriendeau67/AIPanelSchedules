@@ -83,7 +83,7 @@ extension AppDelegate: MessagingDelegate {
               let uid = Auth.auth().currentUser?.uid
         else { return }
 
-        print("📲 FCM TOKEN:", token)
+     //   print("📲 FCM TOKEN:", token)
 
         Firestore.firestore()
             .collection("users")
