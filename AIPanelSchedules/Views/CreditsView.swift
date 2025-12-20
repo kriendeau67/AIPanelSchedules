@@ -4,6 +4,7 @@ struct CreditsView: View {
 
     @EnvironmentObject var creditsService: CreditsService
     @EnvironmentObject var storeKitService: StoreKitService
+    @State private var showingRestoreResult = false
     private let creditProducts: [CreditProduct] = [
         CreditProduct(
             id: "com.aipanelschedules.credits_1",
@@ -77,7 +78,32 @@ struct CreditsView: View {
                         )
                     }
                 }
-                
+                Button {
+                    Task {
+                        await storeKitService.restorePurchases()
+                        showingRestoreResult = true
+                    }
+                } label: {
+                    if storeKitService.isRestoring {
+                        HStack {
+                            ProgressView()
+                            Text("Restoring…")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                    } else {
+                        Text("Restore Purchases")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(storeKitService.isRestoring)
+                .alert("Restore Purchases", isPresented: $showingRestoreResult) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(storeKitService.restoreMessage ?? "Done.")
+                }
 
                 // MARK: - How It Works
                 VStack(alignment: .leading, spacing: 8) {
@@ -98,6 +124,15 @@ struct CreditsView: View {
             .padding()
         }
         .navigationTitle("Credits")
+        .onChange(of: storeKitService.purchaseEvent?.id) { _, _ in
+            guard let event = storeKitService.purchaseEvent else { return }
+
+            let credits = storeKitService.creditsForProductID(event.productID)
+            guard credits > 0 else { return }
+
+            print("✅ Granting \(credits) credits for:", event.productID)
+            creditsService.grantCredits(credits)
+        }
         .onAppear {
             creditsService.startListening()
 

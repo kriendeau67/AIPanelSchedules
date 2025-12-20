@@ -10,11 +10,21 @@
             @StateObject var projectService = ProjectService()
             @StateObject private var creditsService = CreditsService()
             @StateObject private var storeKitService = StoreKitService()
-            
+            @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
             var body: some Scene {
                 WindowGroup {
-                    NavigationStack {
+                   /* NavigationStack {
                         if auth.user == nil {
+                            LoginView()
+                        } else {
+                            ProjectsListView()
+                        }
+                    } */
+                    NavigationStack {
+                        if !hasCompletedOnboarding {
+                            OnboardingContainerView()
+                        } else if auth.user == nil {
                             LoginView()
                         } else {
                             ProjectsListView()

@@ -18,6 +18,16 @@ class StoreKitService: ObservableObject {
     @Published var pricedProducts: [CreditProduct] = []
     @Published var lastPurchasedProductID: String?
     
+    @Published var isRestoring: Bool = false
+    @Published var restoreMessage: String? = nil
+    
+    struct PurchaseEvent: Identifiable {
+        let id: UInt64              // transaction.id
+        let productID: String
+    }
+
+    @Published var purchaseEvent: PurchaseEvent?
+    private var deliveredTransactionIDs = Set<UInt64>()
     private var updatesTask: Task<Void, Never>?
     init() {
         startListeningForTransactions()
@@ -62,6 +72,7 @@ class StoreKitService: ObservableObject {
 
                     await MainActor.run {
                         self.lastPurchasedProductID = transaction.productID
+                        self.emitPurchaseEventIfNeeded(transaction)
                     }
 
                     await transaction.finish()
@@ -72,7 +83,13 @@ class StoreKitService: ObservableObject {
             }
         }
     }
-    
+    private func emitPurchaseEventIfNeeded(_ transaction: Transaction) {
+        // prevent duplicate credit grants
+        guard !deliveredTransactionIDs.contains(transaction.id) else { return }
+        deliveredTransactionIDs.insert(transaction.id)
+
+        self.purchaseEvent = PurchaseEvent(id: transaction.id, productID: transaction.productID)
+    }
     @MainActor
     func loadProducts() async {
         let productIDs: Set<String> = [
@@ -117,6 +134,7 @@ class StoreKitService: ObservableObject {
                 print("🧾 Purchase success:", transaction.productID)
 
                 self.lastPurchasedProductID = transaction.productID
+           //     self.emitPurchaseEventIfNeeded(transaction)
                 await transaction.finish()
 
                 return true
@@ -135,6 +153,23 @@ class StoreKitService: ObservableObject {
         } catch {
             print("❌ Purchase failed:", error)
             return false
+        }
+    }
+    @MainActor
+    func restorePurchases() async {
+        isRestoring = true
+        restoreMessage = nil
+        defer { isRestoring = false }
+
+        do {
+            print("🔄 Restore: starting AppStore.sync()")
+            try await AppStore.sync()
+            print("✅ Restore: AppStore.sync() finished")
+
+            restoreMessage = "Restore complete. If you previously purchased credits, they’ll appear shortly."
+        } catch {
+            print("❌ Restore: AppStore.sync() failed:", error)
+            restoreMessage = "Restore failed: \(error.localizedDescription)"
         }
     }
     func creditsForProductID(_ productID: String) -> Int {

@@ -119,6 +119,13 @@ struct PDFRowView: View {
         .padding(.horizontal)
         .background(.ultraThinMaterial)
         .cornerRadius(10)
+        .contextMenu {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete PDF", systemImage: "trash")
+            }
+        }
     }
 
     private var statusText: String {

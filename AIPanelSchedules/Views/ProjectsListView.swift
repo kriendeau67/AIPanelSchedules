@@ -32,6 +32,10 @@ struct ProjectsListView: View {
                 .tabItem {
                     Label("Credits", systemImage: "creditcard")
                 }
+            SettingsView()
+                   .tabItem {
+                       Label("Settings", systemImage: "gearshape")
+                   }
         }
         .onAppear {
             projectService.loadProjects()

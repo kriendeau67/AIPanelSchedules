@@ -34,11 +34,13 @@ struct PDFFileCard: View {
     enum ActiveAlert: Identifiable {
         case delete
         case scanError
+        case confirmScan
 
         var id: String {
             switch self {
             case .delete: return "delete"
             case .scanError: return "scanError"
+            case .confirmScan: return "confirmScan"
             }
         }
     }
@@ -121,7 +123,10 @@ struct PDFFileCard: View {
                 onExcelTap: handleExcelTap,
                 onViewPDF: onViewPDF,
                 onDelete: { activeAlert = .delete },
-                onScan: startGeminiScan,
+              //  onScan: startGeminiScan,
+                onScan: {
+                    activeAlert = .confirmScan
+                },
                 onGenerateExcel: generateExcel
             )
             .alert(item: $activeAlert) { type in
@@ -140,6 +145,21 @@ struct PDFFileCard: View {
                         title: Text("Scan Failed"),
                         message: Text(scanErrorMessage),
                         dismissButton: .default(Text("OK"))
+                    )
+                case .confirmScan:
+                    return Alert(
+                        title: Text("Confirm Panel Schedule"),
+                        message: Text("""
+                This PDF should be a **single-page electrical panel schedule**.
+
+                Floor plans, risers, and one-line diagrams are not supported.
+
+                Do you want to proceed with scanning?
+                """),
+                        primaryButton: .default(Text("Scan with AI")) {
+                            startGeminiScan()   // ✅ ACTUAL scan happens here
+                        },
+                        secondaryButton: .cancel()
                     )
                 }
             }

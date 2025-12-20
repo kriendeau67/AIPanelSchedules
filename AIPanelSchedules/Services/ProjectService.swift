@@ -549,45 +549,45 @@ extension ProjectService {
     }
 
     // MARK: - Upload PDF
-    func uploadPDF(project: Project, fileURL: URL) {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        func uploadPDF(project: Project, fileURL: URL) {
+            guard let uid = Auth.auth().currentUser?.uid else { return }
 
-        // 1. Create a UNIQUE filename
-        let uniqueFileName = "\(UUID().uuidString).pdf"
-        let path = "users/\(uid)/projectFiles/\(project.id)/\(uniqueFileName)"
-        let ref = Storage.storage().reference().child(path)
+            // 1. Create a UNIQUE filename
+            let uniqueFileName = "\(UUID().uuidString).pdf"
+            let path = "users/\(uid)/projectFiles/\(project.id)/\(uniqueFileName)"
+            let ref = Storage.storage().reference().child(path)
 
-        print("📤 Starting upload to: \(path)")
+            print("📤 Starting upload to: \(path)")
 
-        // 2. Upload the file
-        ref.putFile(from: fileURL, metadata: nil) { metadata, error in
-            if let error = error {
-                print("❌ Error uploading PDF:", error.localizedDescription)
-                return
-            }
-
-            // 3. Get the Download URL
-            ref.downloadURL { url, error in
-                guard let downloadURL = url else {
-                    print("❌ Upload finished, but failed to get Download URL:", error?.localizedDescription ?? "Unknown error")
+            // 2. Upload the file
+            ref.putFile(from: fileURL, metadata: nil) { metadata, error in
+                if let error = error {
+                    print("❌ Error uploading PDF:", error.localizedDescription)
                     return
                 }
-                
-                print("✅ Got Download URL: \(downloadURL.absoluteString)")
 
-                // --- THE FIX: WAIT 1 SECOND BEFORE SAVING TO DB ---
-                // This ensures the upload connection is fully closed before the UI tries to read the new file.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                // 3. Get the Download URL
+                ref.downloadURL { url, error in
+                    guard let downloadURL = url else {
+                        print("❌ Upload finished, but failed to get Download URL:", error?.localizedDescription ?? "Unknown error")
+                        return
+                    }
                     
-                    // 4. Save Metadata WITH the URL
-                    self.savePDFMetadata(project: project,
-                                         fileName: fileURL.lastPathComponent,
-                                         downloadURL: downloadURL.absoluteString)
+                    print("✅ Got Download URL: \(downloadURL.absoluteString)")
+
+                    // --- THE FIX: WAIT 1 SECOND BEFORE SAVING TO DB ---
+                    // This ensures the upload connection is fully closed before the UI tries to read the new file.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        
+                        // 4. Save Metadata WITH the URL
+                        self.savePDFMetadata(project: project,
+                                             fileName: fileURL.lastPathComponent,
+                                             downloadURL: downloadURL.absoluteString)
+                    }
+                    // --------------------------------------------------
                 }
-                // --------------------------------------------------
             }
         }
-    }
 
     // MARK: - Save PDF Metadata (Helper)
     private func savePDFMetadata(project: Project, fileName: String, downloadURL: String) {

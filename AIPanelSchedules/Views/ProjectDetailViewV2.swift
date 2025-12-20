@@ -15,6 +15,14 @@ struct ProjectDetailViewV2: View {
     
     @EnvironmentObject var projectService: ProjectService
     @EnvironmentObject var creditsService: CreditsService
+    
+    @State private var pdfErrorTitle: String?
+    @State private var pdfErrorMessage: String?
+
+    private func showPDFError(title: String, message: String) {
+        pdfErrorTitle = title
+        pdfErrorMessage = message
+    }
     @State private var showingBuyCreditsAlert = false
     // 1. INPUT: Accept the Project ID (Resolves the ProjectsListView compile error)
     let projectId: String
@@ -187,6 +195,14 @@ struct ProjectDetailViewV2: View {
                 }
                 .padding(.horizontal)
             }
+        }
+        .alert(pdfErrorTitle ?? "", isPresented: .constant(pdfErrorTitle != nil)) {
+            Button("OK") {
+                pdfErrorTitle = nil
+                pdfErrorMessage = nil
+            }
+        } message: {
+            Text(pdfErrorMessage ?? "")
         }
     }
     //Extracted Panels
@@ -470,19 +486,59 @@ struct ProjectDetailViewV2: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground)))
         .padding(.horizontal)
     }
-    func handlePDFImport(url: URL) {
-        guard let currentProject = project else { return }
-        projectService.uploadPDF(project: currentProject, fileURL: url)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            projectService.fetchProject(id: currentProject.id) { updatedProject in
-                if let updated = updatedProject {
-                    self.project = updated
-                    print("✅ Project updated. Found \(updated.pdfFiles.count) files.")
+  
+    
+    // New - block multi page
+        func handlePDFImport(url: URL) {
+            guard let currentProject = project else { return }
+
+            // 🔒 SECURITY-SCOPED ACCESS
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessed { url.stopAccessingSecurityScopedResource() }
+            }
+
+            // 🧠 Load PDF
+            guard let pdfDocument = PDFDocument(url: url) else {
+                showPDFError(
+                    title: "Invalid PDF",
+                    message: "This file could not be opened as a PDF."
+                )
+                return
+            }
+
+            // 🚫 HARD BLOCK: multi-page PDFs
+            if pdfDocument.pageCount != 1 {
+                showPDFError(
+                    title: "Multiple Pages Detected",
+                    message: """
+        This app only supports **single-page panel schedules**.
+
+        Your PDF has \(pdfDocument.pageCount) pages.
+
+        Please upload one page at a time.
+        """
+                )
+                return
+            }
+            // 🧪 DEBUG — ADD THIS LINE RIGHT HERE
+             //  print("🧪 PDF page count:", pdfDocument.pageCount)
+            // ✅ SAFE TO UPLOAD
+            projectService.uploadPDF(
+                project: currentProject,
+                fileURL: url
+            )
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                projectService.fetchProject(id: currentProject.id) { updatedProject in
+                    if let updated = updatedProject {
+                        self.project = updated
+                        print("✅ Project updated. Found \(updated.pdfFiles.count) files.")
+                    }
                 }
             }
         }
-    }
+        
 }
 // MARK: - Main Content
 
