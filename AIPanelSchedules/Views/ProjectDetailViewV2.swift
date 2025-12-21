@@ -24,6 +24,7 @@ struct ProjectDetailViewV2: View {
         pdfErrorMessage = message
     }
     @State private var showingBuyCreditsAlert = false
+    @State private var showingCreditsView = false
     // 1. INPUT: Accept the Project ID (Resolves the ProjectsListView compile error)
     let projectId: String
     
@@ -105,6 +106,24 @@ struct ProjectDetailViewV2: View {
                 }
                 .listStyle(.insetGrouped)
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Button {
+                            showingCreditsView = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "creditcard.fill")
+                                    .foregroundColor(.blue)
+                                Text("Credits: \(creditsService.credits)")
+                                    .font(.headline)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .sheet(isPresented: $showingCreditsView) {
+                    CreditsView()
+                }
                 .sheet(isPresented: $showingDocumentPicker) {
                     DocumentPicker { handlePDFImport(url: $0) }
                 }
@@ -370,7 +389,7 @@ struct ProjectDetailViewV2: View {
                                     .cornerRadius(8)
                                     
                                     // 🔁 DEV ONLY — RELOCK BUTTON
-                                    #if DEBUG
+                                 /* #if DEBUG
                                         Button("🔁 Relock (DEV)") {
                                             projectService.relockExcel(
                                                 projectId: project.id,
@@ -380,7 +399,7 @@ struct ProjectDetailViewV2: View {
                                         .font(.caption2)
                                         .foregroundColor(.orange)
                                     
-                                    #endif
+                                    #endif */
                                 }
                             }
 
