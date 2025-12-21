@@ -207,6 +207,7 @@ struct PDFFileCard: View {
         createScanJob()
 
         isThisCardScanning = true
+        scanStatusText = "Starting scan…"
         currentScanningID = cardID
         listenForScanCompletion()   // 👈 ADD THIS
 
@@ -339,32 +340,40 @@ struct PDFFileCard: View {
     }
     
     func runProgressAnimation() async {
-        // ... (your existing animation code) ...
-        func updateStatus(_ text: String) async {
-            await MainActor.run { self.scanStatusText = text }
+        // Phase 1 — fast reassurance (first ~10 seconds)
+        let earlyMessages = [
+            "Starting scan…",
+            "Preparing PDF…",
+            "Sending to AI service…"
+        ]
+
+        for message in earlyMessages {
+            if !isThisCardScanning { return }
+            await MainActor.run {
+                self.scanStatusText = message
+            }
+            try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
         }
 
-        await updateStatus("Initializing Gemini...")
-        
-        try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
+        // Phase 2 — long-running calm state (main 2-minute window)
         if !isThisCardScanning { return }
-        await updateStatus("Scanning PDF Layout...")
-        
-        try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)
+        await MainActor.run {
+            self.scanStatusText = "Scanning panel schedule… You can leave the app."
+        }
+
+        // Wait ~80 seconds before optional final message
+        try? await Task.sleep(nanoseconds: 80 * 1_000_000_000)
         if !isThisCardScanning { return }
-        await updateStatus("Identifying Panel Schedules...")
-        
-        try? await Task.sleep(nanoseconds: 10 * 1_000_000_000)
-        if !isThisCardScanning { return }
-        await updateStatus("Extracting Circuits & Voltages...")
-        
-        try? await Task.sleep(nanoseconds: 15 * 1_000_000_000)
-        if !isThisCardScanning { return }
-        await updateStatus("Continuing AI Magic...")
-        
-        try? await Task.sleep(nanoseconds: 20 * 1_000_000_000)
-        if !isThisCardScanning { return }
-        await updateStatus("Finalizing Data...")
+
+        // Phase 3 — final reassurance (only if still running)
+        await MainActor.run {
+            self.scanStatusText = "Finalizing results…"
+        }
+
+        // Idle until scan completes
+        while isThisCardScanning {
+            try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)
+        }
     }
     private func listenForScanCompletion() {
         guard
