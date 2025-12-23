@@ -18,6 +18,7 @@ import FirebaseCore
 class AuthService: ObservableObject {
 
     @Published var user: User? = Auth.auth().currentUser
+    @Published var needsReAuth = false
     private var nonce: String?
 
     init() {
@@ -72,7 +73,29 @@ class AuthService: ObservableObject {
         )
         try await Auth.auth().signIn(with: firebaseCredential)
     }
-
+    func deleteAccount() async {
+            guard let user = Auth.auth().currentUser else {
+                print("❌ No user found in Auth.auth().currentUser")
+                return
+            }
+            
+            print("🚀 Attempting to delete user: \(user.uid)")
+            
+            do {
+                try await user.delete()
+                print("✅ Firebase Auth user deleted successfully")
+                self.user = nil
+            } catch let error as NSError {
+                print("❌ DELETE ERROR CODE: \(error.code)")
+                print("❌ DELETE ERROR MESSAGE: \(error.localizedDescription)")
+                
+                // Check specifically for the 'requires-recent-login' code (17014)
+                if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
+                    print("⚠️ Triggering needsReAuth flag")
+                    self.needsReAuth = true
+                }
+            }
+        }
     // MARK: - Utilities for Apple Sign In
     private func sha256(_ input: String) -> String {
         let inputData = Data(input.utf8)

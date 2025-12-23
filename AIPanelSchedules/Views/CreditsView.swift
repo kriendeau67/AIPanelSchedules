@@ -78,33 +78,7 @@ struct CreditsView: View {
                         )
                     }
                 }
-                Button {
-                    Task {
-                        await storeKitService.restorePurchases()
-                        showingRestoreResult = true
-                    }
-                } label: {
-                    if storeKitService.isRestoring {
-                        HStack {
-                            ProgressView()
-                            Text("Restoring…")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                    } else {
-                        Text("Restore Purchases")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(storeKitService.isRestoring)
-                .alert("Restore Purchases", isPresented: $showingRestoreResult) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text(storeKitService.restoreMessage ?? "Done.")
-                }
-
+                
                 // MARK: - How It Works
                 VStack(alignment: .leading, spacing: 8) {
                     Text("How credits work")
