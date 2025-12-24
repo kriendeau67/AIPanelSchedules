@@ -1,35 +1,14 @@
 import SwiftUI
 import StoreKit
-struct CreditsView: View {
 
+struct CreditsView: View {
     @EnvironmentObject var creditsService: CreditsService
     @EnvironmentObject var storeKitService: StoreKitService
+    
     @State private var showingRestoreResult = false
-    private let creditProducts: [CreditProduct] = [
-        CreditProduct(
-            id: "com.aipanelschedules.credits_1",
-            credits: 1,
-            title: "1 Credit",
-            subtitle: "Unlocks 1 Excel file",
-            priceText: "—"
-        ),
-        CreditProduct(
-            id: "com.aipanelschedules.credits_3",
-            credits: 3,
-            title: "3 Credits",
-            subtitle: "Unlocks 3 Excel files",
-            priceText: "—"
-        ),
-        CreditProduct(
-            id: "com.aipanelschedules.credits_10",
-            credits: 10,
-            title: "10 Credits",
-            subtitle: "Unlocks 10 Excel files",
-            priceText: "—"
-        )
-    ]
     @State private var showingPurchaseConfirm = false
     @State private var selectedProduct: CreditProduct?
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -54,28 +33,15 @@ struct CreditsView: View {
                 .background(Color(.secondarySystemBackground))
                 .cornerRadius(12)
 
-                // MARK: - Purchase Options (PLACEHOLDERS)
-               
-
+                // MARK: - Purchase Options
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Buy Credits")
                         .font(.headline)
 
+                    // We use the pricedProducts from the service because they
+                    // contain the updated priceText from Apple's servers.
                     ForEach(storeKitService.pricedProducts) { product in
-                        let priceText =
-                            storeKitService.products
-                                .first(where: { $0.id == product.id })?
-                                .displayPrice ?? "—"
-
-                        creditOption(
-                            product: CreditProduct(
-                                id: product.id,
-                                credits: product.credits,
-                                title: product.title,
-                                subtitle: product.subtitle,
-                                priceText: priceText
-                            )
-                        )
+                        creditOption(product: product)
                     }
                 }
                 
@@ -98,6 +64,7 @@ struct CreditsView: View {
             .padding()
         }
         .navigationTitle("Credits")
+        // This is your SINGLE SOURCE OF TRUTH for granting credits.
         .onChange(of: storeKitService.purchaseEvent?.id) { _, _ in
             guard let event = storeKitService.purchaseEvent else { return }
 
@@ -142,6 +109,7 @@ struct CreditsView: View {
             Text(product.subtitle)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+            
             Button {
                 Task {
                     guard let storeProduct = storeKitService.products.first(
@@ -151,12 +119,9 @@ struct CreditsView: View {
                         return
                     }
 
-                    let success = await storeKitService.purchase(storeProduct)
-
-                    if success {
-                        let credits = storeKitService.creditsForProductID(storeProduct.id)
-                        creditsService.grantCredits(credits)
-                    }
+                    // We call purchase, but we DON'T grant credits here.
+                    // The .onChange above will handle it when the purchase is verified.
+                    _ = await storeKitService.purchase(storeProduct)
                 }
             } label: {
                 Text(product.priceText)
@@ -164,12 +129,9 @@ struct CreditsView: View {
                     .padding()
             }
             .buttonStyle(.borderedProminent)
-            .buttonStyle(.borderedProminent)
-#if DEBUG
-            .disabled(false)
-#else
-            .disabled(true)
-#endif
+            // FIXED: The button is only disabled if the price hasn't loaded yet ("—").
+            // This ensures TestFlight users can click it once the server responds.
+            .disabled(product.priceText == "—")
         }
         .padding()
         .background(Color(.secondarySystemBackground))

@@ -38,7 +38,7 @@ class StoreKitService: ObservableObject {
     }
     private let baseCreditProducts: [CreditProduct] = [
         CreditProduct(
-            id: "com.aipanelschedules.credits_1",
+            id: "com.aipanelschedules.credits",
             credits: 1,
             title: "1 Credit",
             subtitle: "Unlocks 1 Excel file",
@@ -66,19 +66,17 @@ class StoreKitService: ObservableObject {
 
             for await result in Transaction.updates {
                 do {
-                    let transaction: Transaction = try self.checkVerified(result)
-
-                    print("🧾 Transaction update:", transaction.productID)
-
+                    let transaction = try self.checkVerified(result)
+                    
+                    // --- USE YOUR DUPLICATE CHECKER HERE ---
                     await MainActor.run {
-                        self.lastPurchasedProductID = transaction.productID
                         self.emitPurchaseEventIfNeeded(transaction)
                     }
+                    // ---------------------------------------
 
                     await transaction.finish()
-
                 } catch {
-                    print("❌ Transaction verification failed:", error)
+                    print("❌ Transaction verification failed")
                 }
             }
         }
@@ -93,7 +91,7 @@ class StoreKitService: ObservableObject {
     @MainActor
     func loadProducts() async {
         let productIDs: Set<String> = [
-            "com.aipanelschedules.credits_1",
+            "com.aipanelschedules.credits",
             "com.aipanelschedules.credits_3",
             "com.aipanelschedules.credits_10"
         ]
@@ -129,29 +127,22 @@ class StoreKitService: ObservableObject {
 
             switch result {
             case .success(let verification):
-                let transaction: Transaction = try self.checkVerified(verification)
-
-                print("🧾 Purchase success:", transaction.productID)
-
-                self.lastPurchasedProductID = transaction.productID
-           //     self.emitPurchaseEventIfNeeded(transaction)
+                // 1. Verify the transaction
+                let transaction = try self.checkVerified(verification)
+                
+                // 2. DO NOT grant credits here.
+                // The startListeningForTransactions() task handles it for everyone.
+                
+                // 3. Always finish the transaction
                 await transaction.finish()
-
                 return true
 
-            case .userCancelled:
-                print("⚠️ User cancelled purchase")
+            case .userCancelled, .pending:
                 return false
-
-            case .pending:
-                print("⏳ Purchase pending approval")
-                return false
-
             @unknown default:
                 return false
             }
         } catch {
-            print("❌ Purchase failed:", error)
             return false
         }
     }
@@ -174,7 +165,7 @@ class StoreKitService: ObservableObject {
     }
     func creditsForProductID(_ productID: String) -> Int {
         switch productID {
-        case "com.aipanelschedules.credits_1": return 1
+        case "com.aipanelschedules.credits": return 1
         case "com.aipanelschedules.credits_3": return 3
         case "com.aipanelschedules.credits_10": return 10
         default: return 0
