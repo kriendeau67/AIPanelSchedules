@@ -65,15 +65,7 @@ struct CreditsView: View {
         }
         .navigationTitle("Credits")
         // This is your SINGLE SOURCE OF TRUTH for granting credits.
-        .onChange(of: storeKitService.purchaseEvent?.id) { _, _ in
-            guard let event = storeKitService.purchaseEvent else { return }
-
-            let credits = storeKitService.creditsForProductID(event.productID)
-            guard credits > 0 else { return }
-
-            print("✅ Granting \(credits) credits for:", event.productID)
-            creditsService.grantCredits(credits)
-        }
+        
         .onAppear {
             creditsService.startListening()
 
@@ -119,18 +111,31 @@ struct CreditsView: View {
                         return
                     }
 
-                    // We call purchase, but we DON'T grant credits here.
-                    // The .onChange above will handle it when the purchase is verified.
-                    _ = await storeKitService.purchase(storeProduct)
+                    // 1. We capture the result of the purchase
+                    let success = await storeKitService.purchase(storeProduct)
+                    
+                    // 2. If it was successful, we grant the credits immediately right here
+                    if success {
+                        let credits = storeKitService.creditsForProductID(storeProduct.id)
+                        
+                        // Simple check: Only grant if the product isn't already marked as the 'last' one
+                        if storeKitService.lastPurchasedProductID != storeProduct.id {
+                            creditsService.grantCredits(credits)
+                            storeKitService.lastPurchasedProductID = storeProduct.id
+                            print("✅ Success! Granted \(credits) credits.")
+                        }
+                    } else {
+                        print("❌ Purchase failed or was cancelled.")
+                    }
                 }
             } label: {
+                // This stays exactly the same - keep your priceText
                 Text(product.priceText)
                     .frame(maxWidth: .infinity)
                     .padding()
             }
             .buttonStyle(.borderedProminent)
-            // FIXED: The button is only disabled if the price hasn't loaded yet ("—").
-            // This ensures TestFlight users can click it once the server responds.
+            // KEEP THIS - This is the fix that made your buttons blue!
             .disabled(product.priceText == "—")
         }
         .padding()

@@ -24,6 +24,17 @@ class AuthService: ObservableObject {
     init() {
         Auth.auth().addStateDidChangeListener { _, user in
             self.user = user
+            
+            if user == nil {
+                // 🚨 ONE STEP: Tell the app to wipe all cached data!
+                print("🧹 User is nil, broadcasting clear command...")
+                NotificationCenter.default.post(name: NSNotification.Name("UserDidLogout"), object: nil)
+            } else {
+                print("👤 User detected, syncing FCM token...")
+                DispatchQueue.main.async {
+                    (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
+                }
+            }
         }
     }
 
@@ -41,6 +52,7 @@ class AuthService: ObservableObject {
                                                        accessToken: result.user.accessToken.tokenString)
 
         try await Auth.auth().signIn(with: credential)
+        (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
     }
 
     // MARK: - Apple Sign In Helpers
@@ -72,30 +84,38 @@ class AuthService: ObservableObject {
             fullName: credential.fullName
         )
         try await Auth.auth().signIn(with: firebaseCredential)
+        (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
     }
     func deleteAccount() async {
-            guard let user = Auth.auth().currentUser else {
-                print("❌ No user found in Auth.auth().currentUser")
-                return
-            }
+        guard let user = Auth.auth().currentUser else {
+            print("❌ No user found in Auth.auth().currentUser")
+            return
+        }
+        
+        print("🚀 Attempting to delete user: \(user.uid)")
+        
+        do {
+            // 1. Delete from Firebase Server
+            try await user.delete()
+            print("✅ Firebase Auth user deleted successfully")
             
-            print("🚀 Attempting to delete user: \(user.uid)")
+            // 2. 🔥 ADD THIS: Force the local session to clear
+            // This stops the "Delete twice" bug
+            try Auth.auth().signOut()
             
-            do {
-                try await user.delete()
-                print("✅ Firebase Auth user deleted successfully")
-                self.user = nil
-            } catch let error as NSError {
-                print("❌ DELETE ERROR CODE: \(error.code)")
-                print("❌ DELETE ERROR MESSAGE: \(error.localizedDescription)")
-                
-                // Check specifically for the 'requires-recent-login' code (17014)
-                if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
-                    print("⚠️ Triggering needsReAuth flag")
-                    self.needsReAuth = true
-                }
+            // 3. Clear the published property
+            self.user = nil
+            
+        } catch let error as NSError {
+            print("❌ DELETE ERROR CODE: \(error.code)")
+            print("❌ DELETE ERROR MESSAGE: \(error.localizedDescription)")
+            
+            if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
+                print("⚠️ Triggering needsReAuth flag")
+                self.needsReAuth = true
             }
         }
+    }
     // MARK: - Utilities for Apple Sign In
     private func sha256(_ input: String) -> String {
         let inputData = Data(input.utf8)

@@ -14,13 +14,7 @@
 
             var body: some Scene {
                 WindowGroup {
-                   /* NavigationStack {
-                        if auth.user == nil {
-                            LoginView()
-                        } else {
-                            ProjectsListView()
-                        }
-                    } */
+
                     NavigationStack {
                         if !hasCompletedOnboarding {
                             OnboardingContainerView()
@@ -38,6 +32,16 @@
                     .onAppear {
                         creditsService.startListening()
                     }
+                    .onChange(of: storeKitService.purchaseEvent) { oldEvent, newEvent in
+                                            if let event = newEvent {
+                                                let amount = storeKitService.creditsForProductID(event.productID)
+                                                print("🛒 App-level purchase detected: \(event.productID), granting \(amount) credits")
+                                                creditsService.grantCredits(amount)
+                                                
+                                                // Clear it so it only happens once
+                                                storeKitService.purchaseEvent = nil
+                                            }
+                                        }
                 }
             }
         }

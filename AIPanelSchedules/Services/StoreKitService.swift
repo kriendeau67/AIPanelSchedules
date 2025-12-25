@@ -21,7 +21,7 @@ class StoreKitService: ObservableObject {
     @Published var isRestoring: Bool = false
     @Published var restoreMessage: String? = nil
     
-    struct PurchaseEvent: Identifiable {
+    struct PurchaseEvent: Identifiable, Equatable {
         let id: UInt64              // transaction.id
         let productID: String
     }
@@ -67,8 +67,7 @@ class StoreKitService: ObservableObject {
             for await result in Transaction.updates {
                 do {
                     let transaction = try self.checkVerified(result)
-                    
-                    // --- USE YOUR DUPLICATE CHECKER HERE ---
+                    print("🎯 BACKGROUND LISTENER: Caught transaction \(transaction.id)") // 👈 ADD THIS PRINT                    // --- USE YOUR DUPLICATE CHECKER HERE ---
                     await MainActor.run {
                         self.emitPurchaseEventIfNeeded(transaction)
                     }
@@ -81,12 +80,13 @@ class StoreKitService: ObservableObject {
             }
         }
     }
+    @MainActor // 👈 Ensure this is here
     private func emitPurchaseEventIfNeeded(_ transaction: Transaction) {
         // prevent duplicate credit grants
         guard !deliveredTransactionIDs.contains(transaction.id) else { return }
         deliveredTransactionIDs.insert(transaction.id)
 
-        self.purchaseEvent = PurchaseEvent(id: transaction.id, productID: transaction.productID)
+       // self.purchaseEvent = PurchaseEvent(id: transaction.id, productID: transaction.productID)
     }
     @MainActor
     func loadProducts() async {
@@ -96,7 +96,7 @@ class StoreKitService: ObservableObject {
             "com.aipanelschedules.credits_10"
         ]
 
-        print("🛒 Requested product IDs:", productIDs)
+      //  print("🛒 Requested product IDs:", productIDs)
         do {
             let products = try await Product.products(for: productIDs)
 

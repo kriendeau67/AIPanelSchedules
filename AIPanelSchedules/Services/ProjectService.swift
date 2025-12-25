@@ -13,7 +13,17 @@ class ProjectService: ObservableObject {
     private var uid: String? {
         Auth.auth().currentUser?.uid
     }
-
+    init() {
+        // 🚨 THIS IS THE FIX: Listen for the logout and wipe the projects array
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("UserDidLogout"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            print("🗑️ ProjectService: Wiping stale projects.")
+            self.projects = []
+        }
+    }
     // MARK: - Load all projects
     // In ProjectService.swift:
 
@@ -92,32 +102,7 @@ class ProjectService: ObservableObject {
                 }
             }
     }
- /*   func unlockExcel(projectId: String, pdfId: String) {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-
-        let ref = Firestore.firestore()
-            .collection("users")
-            .document(uid)
-            .collection("projects")
-            .document(projectId)
-
-        ref.getDocument { snapshot, error in
-            guard
-                let data = snapshot?.data(),
-                var pdfFiles = data["pdfFiles"] as? [[String: Any]]
-            else { return }
-
-            for i in 0..<pdfFiles.count {
-                if pdfFiles[i]["id"] as? String == pdfId {
-                    pdfFiles[i]["excelLocked"] = false
-                }
-            }
-
-            ref.updateData([
-                "pdfFiles": pdfFiles
-            ])
-        }
-    } */
+ 
     
     func consumeCredit() {
         guard let uid = Auth.auth().currentUser?.uid else { return }

@@ -15,10 +15,10 @@ struct ProjectDetailViewV2: View {
     
     @EnvironmentObject var projectService: ProjectService
     @EnvironmentObject var creditsService: CreditsService
-    
+    @Environment(\.dismiss) var dismiss
     @State private var pdfErrorTitle: String?
     @State private var pdfErrorMessage: String?
-
+    @Binding var selectedTab: AppTab // 1. Add this binding
     private func showPDFError(title: String, message: String) {
         pdfErrorTitle = title
         pdfErrorMessage = message
@@ -41,11 +41,9 @@ struct ProjectDetailViewV2: View {
     // --- End of other @State variables ---
     
     // MARK: - Custom Initializer (REQUIRED for projectId)
-    init(projectId: String) {
-        // Initialize the required 'let' property
+    init(projectId: String, selectedTab: Binding<AppTab>) {       
         self.projectId = projectId
-        
-        // Initialize all @State properties
+        self._selectedTab = selectedTab
         self._project = State(initialValue: nil)
         self._panels = State(initialValue: [])
         self._currentScanningPDFID = State(initialValue: nil)
@@ -427,7 +425,9 @@ struct ProjectDetailViewV2: View {
                             .buttonStyle(.plain)
                             .alert("No Credits", isPresented: $showingBuyCreditsAlert) {
                                 Button("Buy Credits") {
-                                    // future: navigate to Credits tab
+                                
+                                    selectedTab = .credits
+                                    dismiss()
                                 }
                                 Button("Cancel", role: .cancel) {}
                             } message: {

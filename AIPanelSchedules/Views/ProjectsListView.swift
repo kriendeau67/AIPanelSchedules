@@ -10,32 +10,39 @@ import SwiftUI
 import SwiftUI
 import FirebaseAuth
 
+enum AppTab: Int {
+    case projects = 0
+    case credits = 1
+    case settings = 2
+}
 struct ProjectsListView: View {
 
     @EnvironmentObject var projectService: ProjectService
     @EnvironmentObject var auth: AuthService
-
+    @State private var selectedTab: AppTab = .projects
     @State private var showingNewProjectSheet = false
     @State private var newProjectName = ""
 
     var body: some View {
-        TabView {
-
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 projectsContent
             }
             .tabItem {
                 Label("Projects", systemImage: "folder")
             }
-
+            .tag(AppTab.projects)
+            
             CreditsView()
                 .tabItem {
                     Label("Credits", systemImage: "creditcard")
                 }
+                .tag(AppTab.credits)
             SettingsView()
                    .tabItem {
                        Label("Settings", systemImage: "gearshape")
                    }
+                   .tag(AppTab.settings)
         }
         .onAppear {
             projectService.loadProjects()
@@ -87,8 +94,9 @@ struct ProjectsListView: View {
             List {
                 ForEach(projectService.projects) { project in
                     NavigationLink(
-                        destination: ProjectDetailViewV2(projectId: project.id)
-                    ) {
+                        destination: ProjectDetailViewV2(projectId: project.id, selectedTab: $selectedTab
+                    )
+                  )  {
                         ProjectCard(project: project)
                     }
                     .listRowInsets(EdgeInsets())

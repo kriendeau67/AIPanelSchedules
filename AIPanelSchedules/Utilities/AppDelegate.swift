@@ -79,17 +79,28 @@ extension AppDelegate: MessagingDelegate {
         _ messaging: Messaging,
         didReceiveRegistrationToken fcmToken: String?
     ) {
-        guard let token = fcmToken,
-              let uid = Auth.auth().currentUser?.uid
-        else { return }
+        // This fires automatically on app launch
+        saveTokenToFirestore(fcmToken)
+    }
 
-     //   print("📲 FCM TOKEN:", token)
+    // New helper we can call manually after Login/Signup
+    func saveTokenToFirestore(_ token: String?) {
+        let fcmToken = token ?? Messaging.messaging().fcmToken
+        
+        guard let finalToken = fcmToken,
+              let uid = Auth.auth().currentUser?.uid
+        else {
+            print("⚠️ Cannot save token: No token or No UID")
+            return
+        }
 
         Firestore.firestore()
             .collection("users")
             .document(uid)
             .setData([
-                "fcmToken": token
+                "fcmToken": finalToken
             ], merge: true)
+        
+        print("✅ FCM Token synced to Firestore for UID: \(uid)")
     }
 }
