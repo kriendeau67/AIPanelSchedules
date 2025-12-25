@@ -122,7 +122,15 @@ struct ProjectsListView: View {
                         .padding()
                 }
                 .buttonStyle(.borderedProminent)
-
+#if DEBUG
+                Button("🔔 Debug Test Push") {
+                    Task {
+                        await sendDebugTestPush()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(.orange)
+#endif
                 Button("Sign Out") {
                     try? auth.signOut()
                 }
@@ -130,6 +138,27 @@ struct ProjectsListView: View {
                 .foregroundColor(.secondary)
             }
             .padding()
+        }
+    }
+    private func sendDebugTestPush() async {
+        guard let uid = auth.user?.uid else {
+            print("❌ No UID — cannot send test push")
+            return
+        }
+
+        let urlString =
+        "https://us-central1-aipanelschedules.cloudfunctions.net/testPush?uid=\(uid)"
+
+        guard let url = URL(string: urlString) else {
+            print("❌ Invalid test push URL")
+            return
+        }
+
+        do {
+            let (_, response) = try await URLSession.shared.data(from: url)
+            print("✅ Test push request sent:", response)
+        } catch {
+            print("❌ Test push request failed:", error.localizedDescription)
         }
     }
 }

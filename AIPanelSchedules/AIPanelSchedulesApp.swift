@@ -12,6 +12,9 @@
             @StateObject private var storeKitService = StoreKitService()
             @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
+            init() {
+                    FirebaseApp.configure()
+                }
             var body: some Scene {
                 WindowGroup {
 

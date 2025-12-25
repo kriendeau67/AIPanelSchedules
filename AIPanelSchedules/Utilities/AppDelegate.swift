@@ -19,13 +19,14 @@ import FirebaseFirestore
 import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    let authService = AuthService()   // 👈 ADD THIS LINE
 
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
 
-        FirebaseApp.configure()
+      //  FirebaseApp.configure()
 
         UNUserNotificationCenter.current().delegate = self
 
@@ -80,11 +81,16 @@ extension AppDelegate: MessagingDelegate {
         didReceiveRegistrationToken fcmToken: String?
     ) {
         // This fires automatically on app launch
-        saveTokenToFirestore(fcmToken)
+      //  saveTokenToFirestore(fcmToken)
+        print("🔁 FCM token rotated:", fcmToken ?? "nil")
+
+        Task {
+            await authService.forceRefreshAndSaveFcmToken()
+        }
     }
 
     // New helper we can call manually after Login/Signup
-    func saveTokenToFirestore(_ token: String?) {
+  /*  func saveTokenToFirestore(_ token: String?) {
         let fcmToken = token ?? Messaging.messaging().fcmToken
         
         guard let finalToken = fcmToken,
@@ -102,5 +108,5 @@ extension AppDelegate: MessagingDelegate {
             ], merge: true)
         
         print("✅ FCM Token synced to Firestore for UID: \(uid)")
-    }
+    } */
 }

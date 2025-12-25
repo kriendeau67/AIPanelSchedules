@@ -13,7 +13,8 @@ import AuthenticationServices
 import CryptoKit
 import Combine
 import FirebaseCore
-
+import FirebaseMessaging
+import FirebaseFirestore
 @MainActor
 class AuthService: ObservableObject {
 
@@ -31,9 +32,10 @@ class AuthService: ObservableObject {
                 NotificationCenter.default.post(name: NSNotification.Name("UserDidLogout"), object: nil)
             } else {
                 print("👤 User detected, syncing FCM token...")
-                DispatchQueue.main.async {
-                    (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
-                }
+               
+                  //  (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
+                    Task { await self.forceRefreshAndSaveFcmToken() }
+                
             }
         }
     }
@@ -52,7 +54,8 @@ class AuthService: ObservableObject {
                                                        accessToken: result.user.accessToken.tokenString)
 
         try await Auth.auth().signIn(with: credential)
-        (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
+        //(UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
+        Task { await self.forceRefreshAndSaveFcmToken() }
     }
 
     // MARK: - Apple Sign In Helpers
@@ -84,7 +87,8 @@ class AuthService: ObservableObject {
             fullName: credential.fullName
         )
         try await Auth.auth().signIn(with: firebaseCredential)
-        (UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
+        //(UIApplication.shared.delegate as? AppDelegate)?.saveTokenToFirestore(nil)
+        Task { await self.forceRefreshAndSaveFcmToken() }
     }
     func deleteAccount() async {
         guard let user = Auth.auth().currentUser else {
@@ -114,6 +118,30 @@ class AuthService: ObservableObject {
                 print("⚠️ Triggering needsReAuth flag")
                 self.needsReAuth = true
             }
+        }
+    }
+    
+    func forceRefreshAndSaveFcmToken() async {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("⚠️ No UID, cannot refresh FCM token")
+            return
+        }
+
+        do {
+            let token = try await Messaging.messaging().token()
+            print("🆕 Fresh FCM token fetched:", token)
+
+            try await Firestore.firestore()
+                .collection("users")
+                .document(uid)
+                .setData([
+                    "fcmToken": token,
+                    "fcmUpdatedAt": FieldValue.serverTimestamp()
+                ], merge: true)
+
+            print("✅ Fresh FCM token saved for UID:", uid)
+        } catch {
+            print("❌ Failed to fetch/save FCM token:", error.localizedDescription)
         }
     }
     // MARK: - Utilities for Apple Sign In
