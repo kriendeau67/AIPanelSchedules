@@ -23,16 +23,6 @@ struct ProjectsListView: View {
     @State private var showingNewProjectSheet = false
     @State private var newProjectName = ""
 
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack {
-                projectsContent
-            }
-            .tabItem {
-                Label("Projects", systemImage: "folder")
-            }
-            .tag(AppTab.projects)
-            
             CreditsView()
                 .tabItem {
                     Label("Credits", systemImage: "creditcard")
@@ -122,25 +112,25 @@ struct ProjectsListView: View {
                         .padding()
                 }
                 .buttonStyle(.borderedProminent)
+                if showDebugPush {
+                    Button("🔔 Debug Test Push") {
+                        Task {
+                            await sendDebugTestPush()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                }
+                .buttonStyle(.bordered)
 #if DEBUG
                 Button("🔔 Debug Test Push") {
                     Task {
                         await sendDebugTestPush()
-                    }
-                }
+                .font(.footnote)
+            .padding()
                 .buttonStyle(.bordered)
                 .tint(.orange)
 #endif
-                Button("Sign Out") {
-                    try? auth.signOut()
-                }
-                .font(.footnote)
-                .foregroundColor(.secondary)
-            }
-            .padding()
-        }
-    }
-    private func sendDebugTestPush() async {
         guard let uid = auth.user?.uid else {
             print("❌ No UID — cannot send test push")
             return

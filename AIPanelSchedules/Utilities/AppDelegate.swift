@@ -46,11 +46,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
     func application(
-            _ application: UIApplication,
-            didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-        ) {
-            Messaging.messaging().apnsToken = deviceToken
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        Messaging.messaging().apnsToken = deviceToken
+        print("✅ APNs token set")
+
+        Task {
+            await authService.forceRefreshAndSaveFcmToken()
         }
+    }
 
 
     // ✅ MUST be here (class-level)
