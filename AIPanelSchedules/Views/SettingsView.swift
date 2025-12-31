@@ -58,18 +58,21 @@ struct SettingsView: View {
                 // MARK: About
                 Section("About") {
                     VStack(alignment: .leading, spacing: 8) {
+                        
                         Text("About the Developer")
                             .font(.headline)
                         
-                        Text("PanelScanner is built by a 40 year commercial electrical foreman who is passionate about electrical work and data. The app is focused on turning real-world field drawings into clean, usable data — without overcomplicating the workflow.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        Text("""
+                        AIPanelSchedules is built by a commercial electrical foreman with decades of field experience.
+                        The app focuses on turning real-world panel schedules into clean, usable data — without
+                        overcomplicating the workflow.
+                        """)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                         
-                        // UPDATED LINK: Pointing specifically to the app's sub-page
-                        Link("Visit Developer Website",
-                             destination: URL(string: "https://aipanelschedules.netlify.app/aipanelschedules.html")!)
+                        Link("Support & Privacy",
+                             destination: URL(string: "https://kenriendeaudev.netlify.app/legal.html")!)
                             .font(.subheadline)
-                            .foregroundColor(.blue)
                         
                         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
                         Text("Version \(version)")
